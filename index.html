@@ -286,6 +286,7 @@ async function route(){
   const { data:prof, error } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
   if(error){ console.warn(error); }
   PROFILE = prof || { role:null };
+  try { const { data: __ctx } = await sb.rpc('owner_ctx'); if (__ctx && __ctx[0] && __ctx[0].agency_display) PROFILE.agency_display = __ctx[0].agency_display; } catch(e){}
   if(!ALLOWED_ROLES.includes(PROFILE.role)){
     $('gate-title').textContent='This app is for agency owners';
     $('gate-msg').textContent='Your account is not set up as an agency owner yet. Ask your IMO admin to enable agency access.';
@@ -305,10 +306,11 @@ async function route(){
 }
 
 function enterApp(){
-  $('t-agency').textContent = PROFILE.agency_name;
+  const AG = PROFILE.agency_display || PROFILE.agency_name;
+  $('t-agency').textContent = AG;
   $('t-owner').textContent = (PROFILE.display_name || ((PROFILE.first_name||'')+' '+(PROFILE.last_name||''))).trim() || 'Owner';
-  const initials = (PROFILE.agency_name||'E').trim()[0].toUpperCase();
-  $('avatar').textContent = initials; $('dr-name').textContent = PROFILE.agency_name;
+  const initials = (AG||'E').trim()[0].toUpperCase();
+  $('avatar').textContent = initials; $('dr-name').textContent = AG;
   $('dr-email').textContent = PROFILE.email || '';
   show('app');
   loadAll();
