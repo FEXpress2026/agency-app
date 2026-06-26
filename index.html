@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<title>Equita Agency — Owner App</title>
+<meta name="theme-color" content="#06b6d4" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Equita Agency" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0a1628; --bg-2:#0f1c34; --surface:#131f38; --surface-2:#1c2a47; --surface-3:#243553;
+    --border:#2a3a5c; --border-soft:#1f2d4a; --text:#e8eef8; --text-secondary:#9aa8c4; --text-muted:#6c7a96;
+    --accent:#06b6d4; --accent-2:#22d3ee; --life:#3b82f6; --medicare:#10b981; --gold:#f5b301;
+    --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --shadow:0 4px 24px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+    background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5;
+    -webkit-font-smoothing:antialiased; overscroll-behavior-y:none;
+  }
+  .hidden{display:none !important;}
+  #splash{position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; z-index:9999;}
+  .logo-badge{width:74px; height:74px; border-radius:18px; background:linear-gradient(135deg,#06b6d4,#3b82f6); display:grid; place-items:center; font-size:38px; font-weight:800; color:#fff; box-shadow:0 8px 30px rgba(6,182,212,.4);}
+  .spinner{width:30px; height:30px; border:3px solid var(--surface-3); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #auth{min-height:100vh; display:flex; flex-direction:column; justify-content:center; padding:28px 22px calc(28px + env(safe-area-inset-bottom)); max-width:460px; margin:0 auto;}
+  .auth-head{text-align:center; margin-bottom:26px;}
+  .auth-head .logo-badge{margin:0 auto 14px;}
+  .auth-head h1{font-size:23px; font-weight:800; letter-spacing:-.3px;}
+  .auth-head p{color:var(--text-secondary); font-size:14px; margin-top:4px;}
+  .seg{display:flex; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:20px;}
+  .seg button{flex:1; border:0; background:transparent; color:var(--text-secondary); font-weight:600; font-size:14px; padding:10px; border-radius:9px; cursor:pointer; transition:.15s;}
+  .seg button.active{background:var(--accent); color:#04222a;}
+  form{display:flex; flex-direction:column; gap:13px;}
+  .row2{display:flex; gap:11px;} .row2 > *{flex:1;}
+  label{font-size:12px; color:var(--text-secondary); font-weight:600; margin-bottom:5px; display:block;}
+  input{width:100%; background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:13px 14px; color:var(--text); font-size:16px; outline:none; transition:.15s;}
+  input:focus{border-color:var(--accent); background:var(--surface-2);}
+  .btn{border:0; border-radius:11px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; transition:.15s; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .btn-primary{background:linear-gradient(135deg,#06b6d4,#0891b2); color:#04222a;}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-ghost{background:var(--surface-2); color:var(--text);}
+  .btn:disabled{opacity:.55; cursor:not-allowed;}
+  .msg{font-size:13px; padding:11px 13px; border-radius:10px; margin-top:4px; display:none;}
+  .msg.err{background:rgba(239,68,68,.12); color:#fca5a5; display:block;}
+  .msg.ok{background:rgba(16,185,129,.12); color:#6ee7b7; display:block;}
+  .auth-foot{text-align:center; margin-top:18px; font-size:12px; color:var(--text-muted);}
+  #gate{min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:28px; gap:16px;}
+  #gate h2{font-size:21px; font-weight:800;} #gate p{color:var(--text-secondary); font-size:14px; max-width:340px;}
+  #app{min-height:100vh; display:flex; flex-direction:column; padding-bottom:calc(70px + env(safe-area-inset-bottom));}
+  .topbar{position:sticky; top:0; z-index:50; background:rgba(15,28,52,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--border-soft); padding:calc(12px + env(safe-area-inset-top)) 16px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .topbar .who{display:flex; flex-direction:column; min-width:0;}
+  .topbar .who .agency{font-weight:800; font-size:16px; letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .topbar .who .sub{font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px;}
+  .period{background:var(--surface-2); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:8px 10px; font-size:13px; font-weight:600;}
+  .avatar{width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#06b6d4,#3b82f6); display:grid; place-items:center; font-weight:800; color:#fff; cursor:pointer; flex-shrink:0;}
+  main{flex:1; padding:16px;}
+  .tabpane{display:none;} .tabpane.active{display:block; animation:fade .2s;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1;}}
+  .kpis{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;}
+  .kpi{background:var(--surface); border:1px solid var(--border-soft); border-radius:15px; padding:15px;}
+  .kpi.full{grid-column:1 / -1;}
+  .kpi .label{font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; font-weight:600;}
+  .kpi .val{font-size:25px; font-weight:800; margin-top:6px; letter-spacing:-.5px;}
+  .kpi .val.accent{color:var(--accent-2);}
+  .kpi .sub{font-size:11px; color:var(--text-secondary); margin-top:3px;}
+  .card{background:var(--surface); border:1px solid var(--border-soft); border-radius:15px; padding:16px; margin-bottom:16px;}
+  .card h3{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--text-secondary); margin-bottom:14px; font-weight:700;}
+  .chart-wrap{position:relative; height:200px;}
+  .lrow{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border-soft);}
+  .lrow:last-child{border-bottom:0;}
+  .rank{width:26px; height:26px; border-radius:8px; background:var(--surface-2); display:grid; place-items:center; font-size:12px; font-weight:800; color:var(--text-secondary); flex-shrink:0;}
+  .rank.r1{background:linear-gradient(135deg,#f5b301,#f59e0b); color:#3a2a00;} .rank.r2{background:#c0c8d6; color:#222;} .rank.r3{background:#cd7f32; color:#fff;}
+  .lrow .nm{flex:1; min-width:0;} .lrow .nm .n{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:capitalize;}
+  .lrow .nm .s{font-size:11px; color:var(--text-muted);}
+  .lrow .amt{text-align:right; font-weight:800; font-size:14px;}
+  .lrow.mine{background:rgba(6,182,212,.08); margin:0 -8px; padding-left:8px; padding-right:8px; border-radius:8px;}
+  .pill{display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; background:rgba(6,182,212,.16); color:var(--accent-2); margin-left:6px; vertical-align:middle;}
+  .botnav{position:fixed; bottom:0; left:0; right:0; z-index:60; background:rgba(15,28,52,.96); backdrop-filter:blur(12px); border-top:1px solid var(--border-soft); display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .botnav button{flex:1; background:transparent; border:0; color:var(--text-muted); display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 2px; cursor:pointer; font-size:10px; font-weight:600;}
+  .botnav button .ic{font-size:19px; line-height:1;}
+  .botnav button.active{color:var(--accent-2);}
+  .muted{color:var(--text-muted);} .center{text-align:center;} .mt{margin-top:14px;}
+  .empty{text-align:center; color:var(--text-muted); padding:30px 10px; font-size:13px;}
+  .drawer-bg{position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:80; display:none;}
+  .drawer-bg.open{display:block;}
+  .drawer{position:fixed; top:0; right:0; bottom:0; width:80%; max-width:320px; background:var(--surface); z-index:81; transform:translateX(100%); transition:.25s; padding:calc(22px + env(safe-area-inset-top)) 20px; display:flex; flex-direction:column; gap:8px;}
+  .drawer.open{transform:translateX(0);}
+  .drawer .di{padding:14px 12px; border-radius:11px; background:var(--surface-2); display:flex; align-items:center; gap:11px; cursor:pointer; font-weight:600; font-size:14px;}
+  .drawer .di:active{background:var(--surface-3);}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="logo-badge">E</div>
+  <div class="spinner"></div>
+</div>
+
+<div id="auth" class="hidden">
+  <div class="auth-head">
+    <div class="logo-badge">E</div>
+    <h1>Equita Agency</h1>
+    <p>Owner production dashboard</p>
+  </div>
+  <div class="seg">
+    <button id="seg-signin" class="active" type="button">Sign in</button>
+    <button id="seg-signup" type="button">Create account</button>
+  </div>
+
+  <form id="form-signin">
+    <div><label>Email</label><input type="email" id="si-email" autocomplete="email" required /></div>
+    <div><label>Password</label><input type="password" id="si-pass" autocomplete="current-password" required /></div>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+    <div class="msg" id="si-msg"></div>
+  </form>
+
+  <form id="form-signup" class="hidden">
+    <div class="row2">
+      <div><label>First name</label><input id="su-first" required /></div>
+      <div><label>Last name</label><input id="su-last" required /></div>
+    </div>
+    <div><label>Agency name</label><input id="su-agency" placeholder="As it appears in your hierarchy" required /></div>
+    <div class="row2">
+      <div><label>NPN</label><input id="su-npn" inputmode="numeric" required /></div>
+      <div><label>Writing # (optional)</label><input id="su-wn" /></div>
+    </div>
+    <div><label>Email</label><input type="email" id="su-email" autocomplete="email" required /></div>
+    <div><label>Password</label><input type="password" id="su-pass" autocomplete="new-password" required /></div>
+    <button class="btn btn-primary" type="submit">Create account</button>
+    <div class="msg" id="su-msg"></div>
+  </form>
+
+  <div class="auth-foot">Equita Analytics &middot; Agency owners only</div>
+</div>
+
+<div id="gate" class="hidden">
+  <div class="logo-badge">E</div>
+  <h2 id="gate-title">Access required</h2>
+  <p id="gate-msg">This app is for Equita agency owners. Ask your IMO admin to enable agency access on your account.</p>
+  <button class="btn btn-ghost" id="gate-signout" style="margin-top:8px; padding:12px 22px;">Sign out</button>
+</div>
+
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="who">
+      <span class="agency" id="t-agency">Agency</span>
+      <span class="sub" id="t-owner">Owner</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <select class="period" id="period">
+        <option value="ytd">YTD 2026</option>
+        <option value="mtd">This month</option>
+        <option value="r12">Rolling 12 mo</option>
+        <option value="prev">2025</option>
+        <option value="all">All time</option>
+      </select>
+      <div class="avatar" id="avatar">E</div>
+    </div>
+  </div>
+
+  <main>
+    <section class="tabpane active" id="pane-mine">
+      <div class="kpis">
+        <div class="kpi"><div class="label">My AP</div><div class="val accent" id="m-ap">&mdash;</div><div class="sub" id="m-ap-sub">Personal production</div></div>
+        <div class="kpi"><div class="label">My Policies</div><div class="val" id="m-pol">&mdash;</div><div class="sub">Submitted</div></div>
+      </div>
+      <div class="card"><h3>My Monthly AP</h3><div class="chart-wrap"><canvas id="ch-mine"></canvas></div></div>
+      <div class="card"><h3>My Production by Carrier</h3><div id="m-carriers"></div></div>
+    </section>
+
+    <section class="tabpane" id="pane-down">
+      <div class="kpis">
+        <div class="kpi"><div class="label">Downline AP</div><div class="val accent" id="d-ap">&mdash;</div><div class="sub" id="d-ap-sub">Excludes your personal</div></div>
+        <div class="kpi"><div class="label">Producing Agents</div><div class="val" id="d-cnt">&mdash;</div><div class="sub">In your agency</div></div>
+      </div>
+      <div class="card"><h3>Downline Agents</h3><div id="d-list"></div></div>
+    </section>
+
+    <section class="tabpane" id="pane-agency">
+      <div class="kpis">
+        <div class="kpi full"><div class="label">Total Agency AP</div><div class="val accent" id="a-ap">&mdash;</div><div class="sub" id="a-ap-sub">You + downline</div></div>
+        <div class="kpi"><div class="label">Policies</div><div class="val" id="a-pol">&mdash;</div><div class="sub">Submitted</div></div>
+        <div class="kpi"><div class="label">Agents</div><div class="val" id="a-cnt">&mdash;</div><div class="sub">Producing</div></div>
+        <div class="kpi"><div class="label">Life AP</div><div class="val" id="a-life">&mdash;</div><div class="sub">Annualized</div></div>
+        <div class="kpi"><div class="label">Medicare</div><div class="val" id="a-med">&mdash;</div><div class="sub">Enrollments</div></div>
+      </div>
+      <div class="card"><h3>Agency Monthly AP</h3><div class="chart-wrap"><canvas id="ch-agency"></canvas></div></div>
+    </section>
+
+    <section class="tabpane" id="pane-board">
+      <div class="card"><h3>Agency Leaderboard <span class="muted" style="text-transform:none; font-weight:500;">&middot; by AP</span></h3><div id="b-list"></div></div>
+    </section>
+
+    <section class="tabpane" id="pane-imo">
+      <div class="card"><h3>IMO Leaderboard <span class="muted" style="text-transform:none; font-weight:500;">&middot; all agencies</span></h3><div id="imo-list"></div></div>
+    </section>
+  </main>
+
+  <nav class="botnav">
+    <button class="active" data-tab="mine"><span class="ic">📈</span>Me</button>
+    <button data-tab="down"><span class="ic">👥</span>Downline</button>
+    <button data-tab="agency"><span class="ic">🏛️</span>Agency</button>
+    <button data-tab="board"><span class="ic">🏆</span>Board</button>
+    <button data-tab="imo"><span class="ic">🌐</span>IMO</button>
+  </nav>
+</div>
+
+<div class="drawer-bg" id="drawer-bg"></div>
+<div class="drawer" id="drawer">
+  <div style="font-weight:800; font-size:17px; margin-bottom:6px;" id="dr-name">Account</div>
+  <div class="muted" style="font-size:12px; margin-bottom:14px;" id="dr-email"></div>
+  <div class="di" id="dr-refresh"><span>🔄</span> Refresh data</div>
+  <div class="di" id="dr-signout"><span>🚪</span> Sign out</div>
+  <div style="flex:1;"></div>
+  <div class="muted center" style="font-size:11px;">Equita Agency &middot; v1.0</div>
+</div>
+
+<script>
+/* ============================ CONFIG ============================ */
+const SUPA_URL = "https://tcivqllwxodihiphhknp.supabase.co";
+const SUPA_KEY = "__SUPABASE_PUBLISHABLE_KEY__"; // injected at deploy (same publishable key as agent app / CEO dashboard)
+const ALLOWED_ROLES = ["owner","admin","ceo"];
+const ACTIVE_SUBS = ["active","trialing","comp","granted","owner"];
+
+const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true } });
+
+const $ = (id)=>document.getElementById(id);
+const fmtMoney = (n)=>{ n=+n||0; if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(2)+'M'; if(Math.abs(n)>=1e3) return '$'+(n/1e3).toFixed(1)+'K'; return '$'+Math.round(n).toLocaleString(); };
+const fmtNum = (n)=>(+n||0).toLocaleString();
+let PROFILE=null, CHARTS={};
+
+function periodRange(p){
+  const now=new Date(); const y=now.getFullYear();
+  const iso=(d)=>d.toISOString().slice(0,10);
+  if(p==='mtd') return [iso(new Date(y,now.getMonth(),1)), iso(now)];
+  if(p==='r12'){ const s=new Date(now); s.setMonth(s.getMonth()-12); return [iso(s), iso(now)]; }
+  if(p==='prev') return ['2025-01-01','2025-12-31'];
+  if(p==='all') return ['2000-01-01', iso(now)];
+  return [y+'-01-01', iso(now)];
+}
+
+function show(elId){ ['splash','auth','gate','app'].forEach(x=>$(x).classList.add('hidden')); $(elId).classList.remove('hidden'); }
+$('seg-signin').onclick=()=>{ $('seg-signin').classList.add('active'); $('seg-signup').classList.remove('active'); $('form-signin').classList.remove('hidden'); $('form-signup').classList.add('hidden'); };
+$('seg-signup').onclick=()=>{ $('seg-signup').classList.add('active'); $('seg-signin').classList.remove('active'); $('form-signup').classList.remove('hidden'); $('form-signin').classList.add('hidden'); };
+
+$('form-signin').onsubmit=async(e)=>{
+  e.preventDefault(); const m=$('si-msg'); m.className='msg'; m.textContent='';
+  const btn=e.target.querySelector('button'); btn.disabled=true;
+  const { error } = await sb.auth.signInWithPassword({ email:$('si-email').value.trim(), password:$('si-pass').value });
+  btn.disabled=false;
+  if(error){ m.className='msg err'; m.textContent=error.message; return; }
+  route();
+};
+$('form-signup').onsubmit=async(e)=>{
+  e.preventDefault(); const m=$('su-msg'); m.className='msg'; m.textContent='';
+  const btn=e.target.querySelector('button'); btn.disabled=true;
+  const { error } = await sb.auth.signUp({
+    email:$('su-email').value.trim(), password:$('su-pass').value,
+    options:{ data:{
+      first_name:$('su-first').value.trim(), last_name:$('su-last').value.trim(),
+      npn:$('su-npn').value.trim(), writing_number:$('su-wn').value.trim(),
+      agency_name:$('su-agency').value.trim(), role:'owner', kind:'agency'
+    }}
+  });
+  btn.disabled=false;
+  if(error){ m.className='msg err'; m.textContent=error.message; return; }
+  m.className='msg ok'; m.textContent='Account created. If email confirmation is on, check your inbox, then sign in. Your IMO admin will enable agency access.';
+};
+$('gate-signout').onclick=signOut;
+$('dr-signout').onclick=signOut;
+async function signOut(){ await sb.auth.signOut(); location.reload(); }
+
+async function route(){
+  show('splash');
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ show('auth'); return; }
+  const { data:prof, error } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+  if(error){ console.warn(error); }
+  PROFILE = prof || { role:null };
+  if(!ALLOWED_ROLES.includes(PROFILE.role)){
+    $('gate-title').textContent='This app is for agency owners';
+    $('gate-msg').textContent='Your account is not set up as an agency owner yet. Ask your IMO admin to enable agency access.';
+    show('gate'); return;
+  }
+  if(PROFILE.subscription_status && !ACTIVE_SUBS.includes(PROFILE.subscription_status)){
+    $('gate-title').textContent='Access pending';
+    $('gate-msg').textContent='Your agency access is not active yet. Your IMO admin grants access at registration; please reach out if this persists.';
+    show('gate'); return;
+  }
+  if(!PROFILE.agency_name){
+    $('gate-title').textContent='No agency on file';
+    $('gate-msg').textContent='We could not find an agency linked to your account. Ask your IMO admin to set your agency name.';
+    show('gate'); return;
+  }
+  enterApp();
+}
+
+function enterApp(){
+  $('t-agency').textContent = PROFILE.agency_name;
+  $('t-owner').textContent = (PROFILE.display_name || ((PROFILE.first_name||'')+' '+(PROFILE.last_name||''))).trim() || 'Owner';
+  const initials = (PROFILE.agency_name||'E').trim()[0].toUpperCase();
+  $('avatar').textContent = initials; $('dr-name').textContent = PROFILE.agency_name;
+  $('dr-email').textContent = PROFILE.email || '';
+  show('app');
+  loadAll();
+}
+document.querySelectorAll('.botnav button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.botnav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const t=b.dataset.tab;
+    document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+    $('pane-'+t).classList.add('active');
+  };
+});
+$('avatar').onclick=()=>{ $('drawer').classList.add('open'); $('drawer-bg').classList.add('open'); };
+$('drawer-bg').onclick=()=>{ $('drawer').classList.remove('open'); $('drawer-bg').classList.remove('open'); };
+$('dr-refresh').onclick=()=>{ $('drawer').classList.remove('open'); $('drawer-bg').classList.remove('open'); loadAll(); };
+$('period').onchange=loadAll;
+
+async function rpc(fn, range){ const [s,e]=range; const { data, error } = await sb.rpc(fn, { p_start:s, p_end:e }); if(error){ console.warn(fn, error); return null; } return data; }
+
+async function loadAll(){
+  const range = periodRange($('period').value);
+  await Promise.allSettled([ loadMine(range), loadAgency(range), loadAgents(range), loadImo(range) ]);
+}
+
+function lineChart(canvasId, labels, data){
+  if(CHARTS[canvasId]) CHARTS[canvasId].destroy();
+  const ctx=$(canvasId); if(!ctx) return;
+  CHARTS[canvasId]=new Chart(ctx,{ type:'bar',
+    data:{ labels, datasets:[{ data, backgroundColor:'#06b6d4', borderRadius:5, maxBarThickness:30 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ grid:{display:false}, ticks:{color:'#6c7a96', font:{size:10}} },
+               y:{ grid:{color:'#1f2d4a'}, ticks:{color:'#6c7a96', font:{size:10}, callback:v=>fmtMoney(v)} } } }
+  });
+}
+function monthLabels(trend){ return (trend||[]).map(t=>{ const [y,m]=t.m.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(+m)-1]+' '+y.slice(2); }); }
+
+async function loadMine(range){
+  const d = await rpc('owner_personal', range);
+  if(!d){ return; }
+  $('m-ap').textContent=fmtMoney(d.ap); $('m-pol').textContent=fmtNum(d.policies);
+  $('m-ap-sub').innerHTML = 'Life '+fmtMoney(d.life_ap)+' &middot; '+fmtNum(d.medicare_count)+' MA';
+  lineChart('ch-mine', monthLabels(d.trend), (d.trend||[]).map(t=>+t.ap));
+  const cw=$('m-carriers');
+  const cs=d.by_carrier||[];
+  cw.innerHTML = cs.length ? cs.map(c=>'<div class="lrow"><div class="nm"><div class="n">'+(c.carrier||'—')+'</div><div class="s">'+fmtNum(c.policies)+' policies</div></div><div class="amt">'+fmtMoney(c.ap)+'</div></div>').join('') : '<div class="empty">No personal production in this period.</div>';
+}
+async function loadAgency(range){
+  const d = await rpc('owner_agency_overview', range);
+  if(!d){ return; }
+  $('a-ap').textContent=fmtMoney(d.agency_ap); $('a-pol').textContent=fmtNum(d.agency_policies);
+  $('a-cnt').textContent=fmtNum(d.agent_count); $('a-life').textContent=fmtMoney(d.life_ap); $('a-med').textContent=fmtNum(d.medicare_count);
+  $('a-ap-sub').innerHTML='You '+fmtMoney(d.personal_ap)+' &middot; Downline '+fmtMoney(d.downline_ap);
+  $('d-ap').textContent=fmtMoney(d.downline_ap);
+  lineChart('ch-agency', monthLabels(d.trend), (d.trend||[]).map(t=>+t.ap));
+}
+async function loadAgents(range){
+  const rows = await rpc('owner_agency_agents', range) || [];
+  rows.sort((a,b)=>(+b.ap)-(+a.ap));
+  const down = rows.filter(r=>!r.is_owner);
+  $('d-cnt').textContent=fmtNum(down.length);
+  $('d-list').innerHTML = down.length ? down.map(r=>agentRow(r,null)).join('') : '<div class="empty">No downline production in this period.</div>';
+  $('b-list').innerHTML = rows.length ? rows.map((r,i)=>agentRow(r,i+1)).join('') : '<div class="empty">No production in this period.</div>';
+}
+function agentRow(r, rank){
+  const rk = rank ? '<div class="rank '+(rank<=3?'r'+rank:'')+'">'+rank+'</div>' : '';
+  const persist = r.policies>0 ? Math.round((r.active/r.policies)*100)+'% active' : '';
+  return '<div class="lrow '+(r.is_owner?'mine':'')+'">'+rk+'<div class="nm"><div class="n">'+(r.agent_name||'').toLowerCase()+(r.is_owner?'<span class="pill">YOU</span>':'')+'</div><div class="s">'+fmtNum(r.policies)+' policies'+(persist?' &middot; '+persist:'')+'</div></div><div class="amt">'+fmtMoney(r.ap)+'</div></div>';
+}
+async function loadImo(range){
+  const rows = await rpc('imo_leaderboard', range) || [];
+  $('imo-list').innerHTML = rows.length ? rows.map(r=>'<div class="lrow '+(r.is_mine?'mine':'')+'"><div class="rank '+(r.rank<=3?'r'+r.rank:'')+'">'+r.rank+'</div><div class="nm"><div class="n">'+(r.agency||'—')+(r.is_mine?'<span class="pill">YOURS</span>':'')+'</div><div class="s">'+fmtNum(r.agent_count)+' agents</div></div><div class="amt">'+fmtMoney(r.ap)+'</div></div>').join('') : '<div class="empty">No data.</div>';
+}
+
+sb.auth.onAuthStateChange((evt)=>{ if(evt==='SIGNED_OUT'){ show('auth'); } });
+if(location.search){ history.replaceState(null,'',location.pathname); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
+route();
+</script>
+</body>
+</html>
